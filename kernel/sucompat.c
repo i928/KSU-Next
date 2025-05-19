@@ -53,6 +53,16 @@ static char __user *ksud_user_path(void)
 	return userspace_stack_buffer(ksud_path, sizeof(ksud_path));
 }
 
+static __attribute__((hot)) long ksu_strncpy_from_user_checked(char *dst,
+		        const void __user *unsafe_addr, long count)
+
+{
+	if (unlikely(!ksu_access_ok(unsafe_addr, count)))
+		return -EFAULT;
+
+	return strncpy_from_user(dst, unsafe_addr, count);
+}
+
 int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 			 int *__unused_flags)
 {
@@ -68,9 +78,15 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 		return 0;
 	}
 
+	if (unlikely(!filename_user))
+		return 0;
+
 	char path[sizeof(su) + 1];
-	memset(path, 0, sizeof(path));
-	ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
+	long len = ksu_strncpy_from_user_checked(path, *filename_user, sizeof(path));
+	if (len <= 0)
+		return 0;
+
+	path[sizeof(path) - 1] = '\0';
 
 	if (unlikely(!memcmp(path, su, sizeof(su)))) {
 		pr_info("faccessat su->sh!\n");
@@ -100,7 +116,6 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
 	}
 
 	char path[sizeof(su) + 1];
-	memset(path, 0, sizeof(path));
 // Remove this later!! we use syscall hook, so this will never happen!!!!!
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0) && 0
 	// it becomes a `struct filename *` after 5.18
@@ -115,7 +130,11 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
 	pr_info("vfs_statx su->sh!\n");
 	memcpy((void *)filename->name, sh, sizeof(sh));
 #else
-	ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
+	long len = ksu_strncpy_from_user_checked(path, *filename_user, sizeof(path));
+	if (len <= 0)
+		return 0;
+
+	path[sizeof(path) - 1] = '\0';
 
 	if (unlikely(!memcmp(path, su, sizeof(su)))) {
 		pr_info("newfstatat su->sh!\n");
@@ -141,6 +160,9 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 	}
 #endif
 
+	if (!ksu_is_allow_uid(current_uid().val))
+		return 0;
+
 	if (unlikely(!filename_ptr))
 		return 0;
 
@@ -150,9 +172,6 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 	}
 
 	if (likely(memcmp(filename->name, su, sizeof(su))))
-		return 0;
-
-	if (!ksu_is_allow_uid(current_uid().val))
 		return 0;
 
 	pr_info("do_execveat_common su found\n");
@@ -176,6 +195,9 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 	}
 #endif
 
+	if (!ksu_is_allow_uid(current_uid().val))
+		return 0;
+
 	if (unlikely(!filename_user))
 		return 0;
 
@@ -189,9 +211,9 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 	if (!access_ok(*filename_user, sizeof(path)))
 		return 0;
 #endif
-	// success = returns number of bytes and should be less than path
-	long len = strncpy_from_user(path, *filename_user, sizeof(path));
-	if (len <= 0 || len > sizeof(path))
+	// success = returns number of bytes
+	long len = ksu_strncpy_from_user_checked(path, *filename_user, sizeof(path));
+	if (len <= 0)
 		return 0;
 
 	// strncpy_from_user_nofault does this too

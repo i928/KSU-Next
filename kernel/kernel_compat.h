@@ -35,6 +35,7 @@ extern ssize_t ksu_kernel_read_compat(struct file *p, void *buf, size_t count,
 				      loff_t *pos);
 extern ssize_t ksu_kernel_write_compat(struct file *p, const void *buf,
 				       size_t count, loff_t *pos);
+extern int ksu_access_ok(const void *addr, unsigned long size);
 extern long ksu_copy_from_user_nofault(void *dst, const void __user *src, size_t size);
 
 #endif
