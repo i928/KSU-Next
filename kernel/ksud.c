@@ -131,7 +131,7 @@ static int ksu_handle_bprm_ksud(const char *filename, const char *argv1, const c
 		&& (!memcmp(filename, system_bin_init, sizeof(system_bin_init) - 1))) {
 		if (argv1 && !strcmp(argv1, "second_stage")) {
 			pr_info("%s: /system/bin/init second_stage executed\n", __func__);
-			ksu_apply_kernelsu_rules();
+			apply_kernelsu_rules();
 			init_second_stage_executed = true;
 			ksu_android_ns_fs_check();
 		}
@@ -142,7 +142,7 @@ static int ksu_handle_bprm_ksud(const char *filename, const char *argv1, const c
 		&& (!memcmp(filename, old_system_init, sizeof(old_system_init) - 1))) {
 		if (argv1 && !strcmp(argv1, "--second-stage")) {
 			pr_info("%s: /init --second-stage executed\n", __func__);
-			ksu_apply_kernelsu_rules();
+			apply_kernelsu_rules();
 			init_second_stage_executed = true;
 			ksu_android_ns_fs_check();
 		}
@@ -158,7 +158,7 @@ static int ksu_handle_bprm_ksud(const char *filename, const char *argv1, const c
 		if (strstr(envp_hex, "494E49545F5345434F4E445F53544147453D31")
 			|| strstr(envp_hex, "494E49545F5345434F4E445F53544147453D74727565") ) {
 			pr_info("%s: /init +envp: INIT_SECOND_STAGE executed\n", __func__);
-			ksu_apply_kernelsu_rules();
+			apply_kernelsu_rules();
 			init_second_stage_executed = true;
 			ksu_android_ns_fs_check();
 		}
@@ -168,7 +168,7 @@ first_app_process:
 	if (first_app_process && !strcmp(filename, app_process)) {
 		first_app_process = false;
 		pr_info("%s: exec app_process, /data prepared, second_stage: %d\n", __func__, init_second_stage_executed);
-		ksu_on_post_fs_data(); // actual ksud execution
+		on_post_fs_data(); // actual ksud execution
 		stop_execve_hook();
 	}
 
