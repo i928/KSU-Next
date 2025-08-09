@@ -71,8 +71,23 @@ jobs:
     with:
       os: ${{ matrix.os }}
 
-  build-ksud:
+  build-ksuinit:
     needs: [check-cache, build-susfsd]
+    if: needs.check-cache.outputs.cache-hit != 'true'
+    strategy:
+      matrix:
+        include:
+          - target: aarch64-linux-android
+            os: ubuntu-latest
+          - target: x86_64-linux-android
+            os: ubuntu-latest
+    uses: ./.github/workflows/ksuinit.yml
+    with:
+      target: ${{ matrix.target }}
+      os: ${{ matrix.os }}
+
+  build-ksud:
+    needs: [check-cache, build-ksuinit]
     if: needs.check-cache.outputs.cache-hit != 'true'
     strategy:
       matrix:
