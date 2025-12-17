@@ -134,6 +134,7 @@ void on_boot_completed(void)
     track_throne(true);
 }
 
+#ifndef CONFIG_KSU_SUSFS
 #define MAX_ARG_STRINGS 0x7FFFFFFF
 struct user_arg_ptr {
 #ifdef CONFIG_COMPAT
@@ -146,6 +147,7 @@ struct user_arg_ptr {
 #endif
 	} ptr;
 };
+#endif // #ifndef CONFIG_KSU_SUSFS
 
 static const char __user *get_user_arg_ptr(struct user_arg_ptr argv, int nr)
 {
@@ -366,6 +368,10 @@ int ksu_handle_pre_ksud(const char *filename)
 	return ksu_handle_bprm_ksud(filename, argv1, envp, envp_copy_len);
 }
 
+#ifdef CONFIG_KSU_SUSFS
+extern int ksu_handle_execveat_init(struct filename *filename);
+#endif // #ifdef CONFIG_KSU_SUSFS
+
 // IMPORTANT NOTE: the call from execve_handler_pre WON'T provided correct value for envp and flags in GKI version
 int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 				struct user_arg_ptr *argv,
@@ -389,6 +395,14 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 	if (IS_ERR(filename)) {
 		return 0;
 	}
+
+#ifdef CONFIG_KSU_SUSFS
+    if (!ksu_handle_execveat_init(filename)) {
+        // - return non-zero here if ksu_handle_execveat_init() return success
+        //   as we don't want it to execute ksu_handle_execveat_sucompat()
+        return 1;
+    }
+#endif // #ifdef CONFIG_KSU_SUSFS
 
 	if (unlikely(!memcmp(filename->name, system_bin_init,
 				sizeof(system_bin_init) - 1) &&
@@ -673,7 +687,6 @@ bool ksu_is_safe_mode()
 }
 
 #ifdef KSU_KPROBES_HOOK
-
 static int sys_execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct pt_regs *real_regs = PT_REAL_REGS(regs);

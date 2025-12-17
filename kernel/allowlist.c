@@ -24,7 +24,9 @@
 #include "selinux/selinux.h"
 #include "allowlist.h"
 #include "manager.h"
+#ifndef CONFIG_KSU_SUSFS
 #include "syscall_hook_manager.h"
+#endif // #ifndef CONFIG_KSU_SUSFS
 #include "kernel_compat.h"
 
 #define FILE_MAGIC 0x7f4b5355 // ' KSU', u32
@@ -268,7 +270,9 @@ out:
 		persistent_allow_list();
 #ifdef KSU_KPROBES_HOOK
 		// FIXME: use a new flag
+#ifndef CONFIG_KSU_SUSFS
 		ksu_mark_running_process();
+#endif // #ifndef CONFIG_KSU_SUSFS
 #endif
 	}
 
