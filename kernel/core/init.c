@@ -23,6 +23,7 @@
 #include <linux/susfs.h>
 #endif // #ifdef CONFIG_KSU_SUSFS
 #include "selinux/selinux.h"
+#include "feature/sulog.h"
 
 extern void __init ksu_lsm_hook_init(void);
 extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
@@ -102,6 +103,8 @@ int __init kernelsu_init(void)
 
 	ksu_feature_init();
 
+	ksu_sulog_init();
+
 	ksu_supercalls_init();
 
 	ksu_selinux_hide_init(); // so the feature is registered
@@ -180,6 +183,9 @@ void __exit kernelsu_exit(void)
 	ksu_throne_tracker_exit();
 
 	ksu_allowlist_exit();
+
+
+	ksu_sulog_exit();
 
 	ksu_feature_exit();
 
