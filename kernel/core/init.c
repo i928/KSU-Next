@@ -18,6 +18,7 @@
 #include "supercall/supercall.h"
 #include "ksu.h"
 #include "infra/file_wrapper.h"
+#include "feature/adb_root.h"
 #include "feature/selinux_hide.h"
 #ifdef CONFIG_KSU_SUSFS
 #include <linux/susfs.h>
@@ -104,6 +105,7 @@ int __init kernelsu_init(void)
 	ksu_feature_init();
 
 	ksu_sulog_init();
+	ksu_adb_root_init();
 
 	ksu_supercalls_init();
 
@@ -186,6 +188,8 @@ void __exit kernelsu_exit(void)
 
 
 	ksu_sulog_exit();
+
+	ksu_adb_root_exit();
 
 	ksu_feature_exit();
 
