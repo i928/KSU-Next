@@ -22,7 +22,11 @@
 #include "ksu.h"
 #include "compat/kernel_compat.h"
 
+#ifndef CONFIG_KSU_SUSFS
 static bool ksu_kernel_umount_enabled = true;
+#else
+bool ksu_kernel_umount_enabled = true;
+#endif // #ifndef CONFIG_KSU_SUSFS
 
 static int kernel_umount_feature_get(u64 *value)
 {
