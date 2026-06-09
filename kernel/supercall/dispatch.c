@@ -59,12 +59,51 @@ static int do_get_info(void __user *arg)
 	}
 	cmd.features = KSU_FEATURE_MAX;
 
-	if (copy_to_user(arg, &cmd, sizeof(cmd))) {
-		pr_err("get_version: copy_to_user failed\n");
-		return -EFAULT;
-	}
+    if (is_manager()) {
+        cmd.flags |= KSU_GET_INFO_FLAG_MANAGER;
+    }
+    if (ksu_late_loaded) {
+        cmd.flags |= KSU_GET_INFO_FLAG_LATE_LOAD;
+    }
+#ifdef EXPECTED_SIZE2
+    cmd.flags |= KSU_GET_INFO_FLAG_PR_BUILD;
+#endif
+    cmd.features = KSU_FEATURE_MAX;
+    cmd.uapi_version = KERNEL_SU_UAPI_VERSION;
 
-	return 0;
+    if (copy_to_user(arg, &cmd, sizeof(cmd))) {
+        pr_err("get_version: copy_to_user failed\n");
+        return -EFAULT;
+    }
+
+    return 0;
+}
+
+static int do_get_info_legacy(void __user *arg)
+{
+    struct ksu_get_info_legacy_cmd cmd = { .version = KERNEL_SU_VERSION, .flags = 0 };
+
+#ifdef MODULE
+    cmd.flags |= KSU_GET_INFO_FLAG_LKM;
+#endif
+
+    if (is_manager()) {
+        cmd.flags |= KSU_GET_INFO_FLAG_MANAGER;
+    }
+    if (ksu_late_loaded) {
+        cmd.flags |= KSU_GET_INFO_FLAG_LATE_LOAD;
+    }
+#ifdef EXPECTED_SIZE2
+    cmd.flags |= KSU_GET_INFO_FLAG_PR_BUILD;
+#endif
+    cmd.features = KSU_FEATURE_MAX;
+    
+    if (copy_to_user(arg, &cmd, sizeof(cmd))) {
+        pr_err("get_version: copy_to_user failed\n");
+        return -EFAULT;
+    }
+
+    return 0;
 }
 
 static int do_report_event(void __user *arg)
@@ -792,7 +831,13 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
         .handler = do_get_info,
         .perm_check = always_allow
     },
-	{
+    {
+        .cmd = KSU_IOCTL_GET_INFO_LEGACY,
+        .name = "GET_INFO_LEGACY",
+        .handler = do_get_info_legacy,
+        .perm_check = always_allow
+    },
+    {
         .cmd = KSU_IOCTL_REPORT_EVENT,
         .name = "REPORT_EVENT",
         .handler = do_report_event,
