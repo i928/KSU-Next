@@ -627,6 +627,7 @@ void ksu_prune_allowlist(bool (*is_uid_valid)(uid_t, char *, void *),
 
 void __init ksu_allowlist_init(void)
 {
+	INIT_WORK(&ksu_save_allow_list_work, do_persistent_allow_list);
 	init_default_profiles();
 }
 
