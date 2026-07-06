@@ -259,6 +259,12 @@ ifeq ($(shell grep -q "cpus_ptr;" $(srctree)/include/linux/sched.h; echo $$?),0)
 ccflags-y += -DKSU_COMPAT_HAS_BACKPORTED_CPUS_PTR
 endif
 
+# fallthrough check for allowlist v2
+ifneq ($(shell [ -f $(srctree)/include/linux/compiler_attributes.h ] && grep -q "define fallthrough" $(srctree)/include/linux/compiler_attributes.h; echo $$?),0)
+$(info -- KSU_NEXT: fallthrough in compiler_attributes.h not found)
+ccflags-y += -DKSU_ALLOWLIST_DOES_NOT_HAVE_FALLTHROUGH
+endif
+
 # Handle optional backports
 ifeq ($(shell grep -q "strncpy_from_user_nofault" $(srctree)/include/linux/uaccess.h; echo $$?),0)
 ccflags-y += -DKSU_OPTIONAL_STRNCPY
