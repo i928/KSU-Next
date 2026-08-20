@@ -70,36 +70,12 @@ obj-$(CONFIG_KSU) += kernelsu.o
 LPATH := /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin
 MDIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
-# Check if this is a git repository
-# Try to detect Git repo intelligently
-GIT_ROOT := $(shell cd $(MDIR) && $(LPATH) git rev-parse --show-toplevel 2>/dev/null)
-ifneq ($(GIT_ROOT),)
-KERNEL_GIT_ROOT := $(shell cd $(srctree) && $(LPATH) git rev-parse --show-toplevel 2>/dev/null)
-ifneq ($(GIT_ROOT),$(KERNEL_GIT_ROOT))
-# Only set version if it's a different repo from kernel
-$(shell cd $(GIT_ROOT) && [ -f .git/shallow ] && $(LPATH) git fetch --unshallow 2>/dev/null || true)
-KSU_GIT_VERSION := $(shell cd $(GIT_ROOT) && $(LPATH) git rev-list --count HEAD 2>/dev/null)
-KSU_GIT_TAG := $(shell cd $(GIT_ROOT) && $(LPATH) git describe --tags --abbrev=0 2>/dev/null)
-KSU_GIT_VERSION_VALID := 1
-$(info -- KernelSU-Next Git repo detected at: $(GIT_ROOT))
-endif
-endif
-
-# Calculate version if git version is available
-ifdef KSU_GIT_VERSION_VALID
-# ksu_version: major * 30000 + git version for historical reasons
-$(eval KSU_VERSION=$(shell expr 30000 + $(KSU_GIT_VERSION) + 200))
-$(info -- KernelSU-Next version: $(KSU_VERSION))
-ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
-else
-# If there is no .git directory, use default version
-$(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU-Next a git repository!")
-KSU_VERSION_FALLBACK := 33193
-$(info -- KernelSU-Next version fallback: $(KSU_VERSION_FALLBACK))
-ccflags-y += -DKSU_VERSION=$(KSU_VERSION_FALLBACK)
-KSU_VERSION_TAG_FALLBACK := v3.2.0
-ccflags-y += -DKSU_VERSION_TAG=\"$(KSU_VERSION_TAG_FALLBACK)\"
-endif
+# Version pinned: this driver is delivered as a repo/roomservice project, so
+# it is always a shallow single-branch checkout. The upstream git rev-list
+# scheme would compute a wrong count (and trigger git fetch --unshallow at
+# build time). Bump these when merging a newer upstream KernelSU-Next legacy.
+ccflags-y += -DKSU_VERSION=33193
+ccflags-y += -DKSU_VERSION_TAG=\"v3.2.0-legacy\"
 
 ifndef KSU_NEXT_MANAGER_SIZE
 KSU_NEXT_MANAGER_SIZE := 0x3e6
