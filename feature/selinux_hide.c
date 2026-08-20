@@ -4,6 +4,7 @@
 #include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/version.h>
+#include <linux/security.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
 #include <asm/set_memory.h>
 #else
@@ -43,15 +44,13 @@ static u32 priv_app_sid __read_mostly = 0;
 
 static int ksu_selinux_get_sids(void)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
-	int err1 = security_context_to_sid("u:r:ksu:s0", strlen("u:r:ksu:s0"), &ksu_sid, GFP_KERNEL);
-    int err2 = security_context_to_sid("u:r:priv_app:s0:c512,c768", 
-                                       strlen("u:r:priv_app:s0:c512,c768"), &priv_app_sid, GFP_KERNEL);
-#else
+	/* This LineageOS msm-4.9 backported security_secctx_to_secid (the public
+	 * 3-arg wrapper that handles selinux_state internally); its raw
+	 * security_context_to_sid takes 5 args (namespaced selinux_state). Use the
+	 * wrapper, matching how the rest of the driver resolves SIDs. */
 	int err1 = security_secctx_to_secid("u:r:ksu:s0", strlen("u:r:ksu:s0"), &ksu_sid);
 	int err2 = security_secctx_to_secid("u:r:priv_app:s0:c512,c768",
 					     strlen("u:r:priv_app:s0:c512,c768"), &priv_app_sid);
-#endif
 	if (!err1) pr_info("ksu_selinux_hide: ksu_sid=%u\n", ksu_sid);
 	if (!err2) pr_info("ksu_selinux_hide: priv_app_sid=%u\n", priv_app_sid);
 	return (!ksu_sid || !priv_app_sid) ? -1 : 0;
