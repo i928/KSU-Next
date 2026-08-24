@@ -393,14 +393,24 @@ void track_throne(bool prune_only)
 {
 	static bool throne_tracker_first_run __read_mostly = true;
 
-	// First scan must be synchronous to not break FDE/FBEv1 on older kernels
+	// First scan must be synchronous to not break FDE/FBEv1 on older kernels.
+	// packages.list may not be ready yet on a heavier-than-usual first boot
+	// (e.g. right after a dirty flash with many new system apps), so retry
+	// in place instead of discarding do_track_throne_core()'s "not ready"
+	// signal and permanently invalidating a previously-valid manager pairing.
 	if (unlikely(throne_tracker_first_run)) {
 		mutex_lock(&throne_tracker_mutex);
-		
+
 		const struct cred *saved_cred = override_creds(ksu_cred);
-		do_track_throne_core(prune_only);
+		int first_run_retries = 0;
+		while (!do_track_throne_core(prune_only) && first_run_retries < 10) {
+			first_run_retries++;
+			pr_info("throne_tracker: first run retrying (%d/10) in 100ms...\n",
+				first_run_retries);
+			msleep(100);
+		}
 		revert_creds(saved_cred);
-		
+
 		mutex_unlock(&throne_tracker_mutex);
 		throne_tracker_first_run = false;
 		return;
