@@ -4,6 +4,8 @@
 #include <linux/string.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
+#include <linux/sched/task.h>
+#include <linux/sched/signal.h>
 #ifdef CONFIG_KSU_SUSFS
 #include <linux/namei.h>
 #include <linux/susfs.h>
@@ -746,15 +748,15 @@ static int do_set_init_pgrp(void __user *arg)
 #endif
 
 	write_lock_irq(&tasklist_lock);
-	
-	p = current->group_leader;
-	init_group = task_pgrp(&init_task);
 
-	if (task_session(p) != task_session(&init_task))
+	p = current->group_leader;
+	init_group = init_task.signal->pids[PIDTYPE_PGID];
+
+	if (p->signal->pids[PIDTYPE_SID] != init_task.signal->pids[PIDTYPE_SID])
 		goto out;
 
 	err = 0;
-	if (task_pgrp(p) != init_group) {
+	if (p->signal->pids[PIDTYPE_PGID] != init_group) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0)
         change_pid(pids, p, PIDTYPE_PGID, init_group);
 #else
