@@ -78,11 +78,15 @@ ccflags-y += -DKSU_VERSION=33193
 ccflags-y += -DKSU_VERSION_TAG=\"v3.2.0-legacy\"
 
 ifndef KSU_NEXT_MANAGER_SIZE
-KSU_NEXT_MANAGER_SIZE := 0x3e6
+# Overridden 2026-08-27 to match this ROM's own ksu33.apk certificate
+# (vendor/lineage-priv/keys/releasekey), not upstream's default manager cert --
+# computed via: keytool -printcert -jarfile ksu33.apk -rfc | openssl x509
+# -outform DER | wc -c / sha256sum. See extraAPKs/ksu33_manager_cert.sh.
+KSU_NEXT_MANAGER_SIZE := 0x39e
 endif
 
 ifndef KSU_NEXT_MANAGER_HASH
-KSU_NEXT_MANAGER_HASH := 79e590113c4c4c0c222978e413a5faa801666957b1212a328e46c00c69821bf7
+KSU_NEXT_MANAGER_HASH := e0951ae17bedc0763b81f55c141b5aa0ed3157e30db4be62589182b39b772f42
 endif
 
 ifdef KSU_MANAGER_PACKAGE
