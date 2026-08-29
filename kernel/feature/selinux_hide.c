@@ -489,13 +489,16 @@ bail_out:
 	path_put(&path);
 }
 
+#ifndef KSU_KPROBES_HOOK
 extern bool ksu_input_hook __read_mostly;
+#endif
 
 // init kthread
 static int ksu_hide_init_thread(void *data)
 {
 	set_user_nice(current, 19); // low prio
 
+#ifndef KSU_KPROBES_HOOK
 wait_start:
 	// in input hook got turned off means we have ksud!
 	if (!*(volatile bool *)&ksu_input_hook)
@@ -507,6 +510,7 @@ wait_start:
 
 init_hooks:
 	;
+#endif
 	// apply_kernelsu_rules_fn
 	const char *ksu_domain_args[] = { KERNEL_SU_DOMAIN, NULL };
 	ksu_add_shit_to_list(KSU_SEPOLICY_CMD_TYPE, ksu_domain_args);
