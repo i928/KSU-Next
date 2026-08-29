@@ -110,16 +110,22 @@ $(info -- KernelSU-Next tag fallback: $(KSU_VERSION_TAG_FALLBACK))
 ccflags-y += -DKSU_VERSION_TAG=\"$(KSU_VERSION_TAG_FALLBACK)\"
 endif
 
+# Manager cert pin is per-device: each installed manager APK can be signed
+# differently (e.g. a plain upstream download vs. a device's own preinstalled
+# system app resigned with that ROM's platform key), so this driver source is
+# shared across devices but the expected cert is not. Each device's own outer
+# kernel tree supplies drivers/ksu_manager_cert.mk to override the values
+# below; this file itself must stay device-agnostic. See extraAPKs/ksu33_manager_cert.sh
+# for how to compute a cert's size/hash pair.
+-include $(srctree)/drivers/ksu_manager_cert.mk
+
 ifndef KSU_NEXT_MANAGER_SIZE
-# Overridden to match this ROM's own ksu33.apk certificate
-# (vendor/lineage-priv/keys/releasekey), not upstream's default manager cert --
-# computed via: keytool -printcert -jarfile ksu33.apk -rfc | openssl x509
-# -outform DER | wc -c / sha256sum. See extraAPKs/ksu33_manager_cert.sh.
-KSU_NEXT_MANAGER_SIZE := 0x39e
+# Fallback: upstream KernelSU-Next's own release manager cert (Rifat Azad / KSU-Next).
+KSU_NEXT_MANAGER_SIZE := 0x3e6
 endif
 
 ifndef KSU_NEXT_MANAGER_HASH
-KSU_NEXT_MANAGER_HASH := e0951ae17bedc0763b81f55c141b5aa0ed3157e30db4be62589182b39b772f42
+KSU_NEXT_MANAGER_HASH := 79e590113c4c4c0c222978e413a5faa801666957b1212a328e46c00c69821bf7
 endif
 
 ifdef KSU_MANAGER_PACKAGE
