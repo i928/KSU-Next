@@ -143,11 +143,9 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
     }
 
 // Check if spawned process is normal user app and needs to be umounted
-#ifdef CONFIG_KSU_SUSFS
     if (likely(is_zygote_normal_app_uid(new_uid) && ksu_uid_should_umount(new_uid))) {
         goto do_umount;
     }
-#endif // #ifdef CONFIG_KSU_SUSFS
 
 	if (ksu_is_allow_uid_for_current(new_uid)) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
