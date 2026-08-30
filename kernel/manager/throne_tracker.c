@@ -138,7 +138,11 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 	}
 
 	// now put this on candidate_path
-	if (d_type == DT_REG && !strncmp(name, "base.apk", 8)) {
+	// "base.apk" is what PackageManager names a real /data/app install; a
+	// baked-in /product/app module keeps its own module name instead (e.g.
+	// KernelSUNext.apk), so accept any *.apk file, not just literally "base.apk".
+	if (d_type == DT_REG && namelen > 4 &&
+	    !strncmp(name + namelen - 4, ".apk", 4)) {
 		snprintf(candidate_path, DATA_PATH_LEN, "%s/%.*s", my_ctx->parent_dir, namelen, name);
 	}
 
