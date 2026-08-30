@@ -161,6 +161,14 @@ int __init kernelsu_init(void)
 		ksu_ksud_init();
 
 		ksu_file_wrapper_init();
+
+		// Non-late-load kernels never reach a real (prune_only=false)
+		// manager scan otherwise: on_boot_completed() only prunes, and
+		// reactive triggers (pkg_observer/lsm_hooks) fire only on an
+		// actual package-list change, which never happens for a manager
+		// baked into /product/app at build time. Mirror the late-load
+		// branch above and do a real scan here too.
+		track_throne(false);
 	}
 
 #ifdef MODULE
