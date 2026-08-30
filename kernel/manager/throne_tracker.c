@@ -191,7 +191,12 @@ void search_manager(const char *path, int depth, struct list_head *uid_data)
 				// we were calling is_manager_apk inside iterate_dir
 				// now we defer file opens after iterate_dir
 				// this way we dont open apks while inside that
-				if (!strstarts(candidate_path, "/data/ap") )
+				// /product/ap: also accept a manager baked into the ROM's
+				// /product partition at build time (EROFS-safe, no
+				// post-install flash step) - see search_manager("/product/app", ...)
+				// call site below.
+				if (!strstarts(candidate_path, "/data/ap") &&
+				    !strstarts(candidate_path, "/product/ap"))
 					goto skip_iterate;
 
 				bool is_manager = is_manager_apk(candidate_path);
@@ -343,6 +348,7 @@ static bool do_track_throne_core(bool prune_only)
 		}
 		pr_info("Searching manager...\n");
 		search_manager("/data/app", 2, &uid_list);
+		search_manager("/product/app", 2, &uid_list);
 		pr_info("Search manager finished\n");
 	}
 
