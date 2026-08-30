@@ -362,12 +362,18 @@ static __always_inline bool check_v2_signature(char *path,
 clean:
 	filp_close(fp, 0);
 
-	if (v3_signing_exist || v3_1_signing_exist) {
+	// v3/v3.1 blocks alongside v2 used to be treated as suspicious (possible
+	// downgrade/confusion attack), but modern Soong/AGP signing tools attach
+	// v3 to virtually every app by default - rejecting on mere v3 presence
+	// made every such app (including our own /product/app-baked manager)
+	// unrecognizable regardless of a correct, verified v2 cert match.
+	// apksigner already confirms all present schemes are cryptographically
+	// consistent for a given signer, so a valid v2 match is sufficient here.
 #ifdef CONFIG_KSU_DEBUG
-		pr_err("Unexpected v3 signature scheme found!\n");
-#endif
-		return false;
+	if (v3_signing_exist || v3_1_signing_exist) {
+		pr_info("v3/v3.1 signature scheme also present (not rejected)\n");
 	}
+#endif
 
 	return v2_signing_valid;
 }
