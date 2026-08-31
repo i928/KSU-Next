@@ -33,8 +33,19 @@ static void crown_manager(const char *apk, struct list_head *uid_data)
 {
 	char pkg[KSU_MAX_PACKAGE_NAME];
 	if (get_pkg_from_apk_path(pkg, apk) < 0) {
+#ifdef KSU_MANAGER_PACKAGE
+		// /product/app (and other non-/data/app system-app layouts) don't
+		// encode the package name in their path at all - there's no
+		// "<pkg>-<installHash>" segment for path parsing to find, so this
+		// always fails for a manager baked into /product/app at build time.
+		// By the time we get here the candidate's cert has already been
+		// verified by is_manager_apk(), so falling back to the compile-time
+		// known package name is safe.
+		strscpy(pkg, KSU_MANAGER_PACKAGE, sizeof(pkg));
+#else
 		pr_err("Failed to get package name from apk path: %s\n", apk);
 		return;
+#endif
 	}
 
 	pr_info("manager pkg: %s\n", pkg);
