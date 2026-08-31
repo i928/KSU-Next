@@ -446,14 +446,18 @@ bool is_manager_apk(char *path)
 #ifdef KSU_MANAGER_PACKAGE
 	char pkg[KSU_MAX_PACKAGE_NAME];
 	if (get_pkg_from_apk_path(pkg, path) < 0) {
-		pr_err("Failed to get package name from apk path: %s\n", path);
-		return false;
+		// /product/app (and other non-/data/app system-app layouts) don't
+		// encode the package name in their path at all, so this pre-filter
+		// can't apply there - skip it and fall through to the cert check
+		// below, which is authoritative on its own.
+		goto skip_pkg_check;
 	}
 
 	// pkg is `<real package>`
 	if (strncmp(pkg, KSU_MANAGER_PACKAGE, sizeof(KSU_MANAGER_PACKAGE))) {
 		return false;
 	}
+skip_pkg_check:
 #endif
 	return check_v2_signature(path, EXPECTED_MANAGER_SIZE, EXPECTED_MANAGER_HASH);
 }
