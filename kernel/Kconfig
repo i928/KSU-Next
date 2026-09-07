@@ -88,6 +88,20 @@ config KSU_SUSFS_SUS_MOUNT
         - Effective on all processes for hiding mount entries.
         - mnt_id and mnt_group_id of the sus mount will be assigned to a much bigger number to solve the ssue of id not being contiguous.
 
+config KSU_SUSFS_SUS_OVERLAYFS
+    bool "Enable to hide the overlayfs mount tell"
+    depends on KSU_SUSFS
+    default y
+    help
+        - An overlay mount reports 'ro' together with 'relatime', whereas every
+          genuinely read-only partition reports 'ro' with 'noatime'. That single
+          inconsistency identifies an overlay mount without the detector needing
+          to know anything about overlayfs.
+        - Rewrites the statfs f_flags of such mounts to 'noatime' so they match,
+          and adds ovl_path_lowerdata() for the lowest layer.
+        - The guarded code already exists in fs/statfs.c and fs/overlayfs/util.c;
+          this option is what compiles it in.
+
 config KSU_SUSFS_SUS_KSTAT
     bool "Enable to spoof suspicious kstat"
     depends on KSU_SUSFS
