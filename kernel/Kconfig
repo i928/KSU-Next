@@ -176,6 +176,16 @@ config KSU_SUSFS_SUS_MEMFD
     help
         - Allow preventing the user-defined memfd name from being created
 
+config KSU_LSM_SECURITY_HOOKS
+	bool "Use LSM Security Hooks for KernelSU"
+	default y
+	depends on SECURITY
+	help
+	  Enable manual LSM hooking for KernelSU. This exposes core kernel
+	  security hooks to allow KernelSU to intercept system activities 
+	  without modifying individual file systems or syscall tables.
+	  Crucial for non-GKI backports like msm-4.14.
+
 endmenu
 
 endmenu

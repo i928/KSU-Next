@@ -155,6 +155,15 @@ $(info -- KernelSU-Next: Hook mode: Manual)
 endif
 endif
 
+ifeq ($(CONFIG_KSU_LSM_SECURITY_HOOKS), y)
+# This tree's fs/ hooks (exec/faccessat/stat) are gated by #ifdef CONFIG_KSU, so
+# they compile independent of the hook-mode flag; hook/lsm_hooks.c registers the
+# setuid/setprocattr/inode LSM callbacks via ksu_lsm_hook_init(). So LSM is a
+# valid hook mode -- clear the guard instead of erroring "No hooks were defined".
+$(info -- KernelSU-Next: Hook mode: LSM security hooks)
+HAVE_KSU_HOOK := 0
+endif
+
 ifneq ($(HAVE_KSU_HOOK),0)
 $(error -- KernelSU-Next: No hooks were defined, please integrate manual hooks in your kernel!)
 endif
