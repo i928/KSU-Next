@@ -134,6 +134,9 @@ static int apply_kernelsu_rules_fn(void *ptr)
     ksu_allow(db, "servicemanager", KERNEL_SU_DOMAIN, "process", "getattr");
     ksu_allow(db, "domain", KERNEL_SU_DOMAIN, "process", "sigchld");
 
+    // Bypass user-space sepolicy neverallow check for GMS overlays
+    ksu_allow(db, "gmscore_app", "system_file", "file", "setattr");
+
     // allowLog
     ksu_allow(db, "logd", KERNEL_SU_DOMAIN, "dir", "search");
     ksu_allow(db, "logd", KERNEL_SU_DOMAIN, "file", "read");
