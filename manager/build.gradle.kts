@@ -66,6 +66,13 @@ subprojects {
             defaultConfig {
                 minSdk = androidMinSdkVersion
                 if (this is ApplicationDefaultConfig) {
+                    // applicationId AND code namespace (app/build.gradle.kts) both
+                    // renamed off the well-known "com.rifsxd.ksunext" so root/manager
+                    // detectors keying on the KernelSU-Next package OR class names
+                    // don't find it. Neutral, non-system namespace (not com.android.*/
+                    // com.google.*) to avoid the "system package signed with
+                    // non-platform key" tell.
+                    applicationId = "dev.i928.mgr"
                     targetSdk = androidTargetSdkVersion
                     versionCode = managerVersionCode
                     versionName = managerVersionName
