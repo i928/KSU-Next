@@ -23,7 +23,7 @@ apksign {
 }
 
 android {
-    namespace = "com.rifsxd.ksunext"
+    namespace = "dev.i928.mgr"
 
     buildTypes {
         release {
