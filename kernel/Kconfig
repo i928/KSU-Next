@@ -49,9 +49,12 @@ config KSU_MANUAL_HOOK
 	help
 	  Enable manual hook support.
 
+# LSM security hooks are a hook mode of their own: with them, no dynamic mode
+# is wanted. Without this, a kernel lacking KPROBES gets KSU_SYSCALL_TABLE_HOOK
+# forced on as the only selectable member, which fails to build below 4.17.
 choice
 	prompt "KernelSU dynamic hook mode"
-	depends on KSU && !KSU_MANUAL_HOOK
+	depends on KSU && !KSU_MANUAL_HOOK && !KSU_LSM_SECURITY_HOOKS
 	default KSU_KPROBES_HOOK
 
 config KSU_KPROBES_HOOK
