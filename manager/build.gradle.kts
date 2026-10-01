@@ -47,7 +47,11 @@ fun getGitDescribe(): String {
     return process.inputStream.bufferedReader().use { it.readText().trim() }
 }
 
+// KSU_VERSION_CODE overrides the computed code. Used to build this 3.3 manager
+// above a 3.4 copy baked into /product (crosshatch, UAPI 2 kernel): Android
+// ignores a /data update with a lower versionCode than the system copy.
 fun getVersionCode(): Int {
+    System.getenv("KSU_VERSION_CODE")?.let { return it.toInt() }
     val commitCount = getGitCommitCount()
     val major = 1
     return major * 30000 + commitCount
