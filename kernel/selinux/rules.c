@@ -3,6 +3,11 @@
 #include <linux/uaccess.h>
 #include <linux/types.h>
 #include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+#include <linux/sched/mm.h> // memalloc_noio_save
+#else
+#include <linux/sched.h>
+#endif
 #include <linux/lockdep.h>
 #include <linux/slab.h>
 #include <linux/string.h>
@@ -92,7 +97,7 @@ static inline cpumask_t *ksu_get_current_cpumask_t() { return &current->cpus_all
 
 #endif // #ifndef SELINUX_POLICY_INSTEAD_SELINUX_SS
 
-static int apply_kernelsu_rules_fn(void *ptr)
+static int __apply_kernelsu_rules_fn(void *ptr)
 {
     struct policydb *db = (struct policydb *)ptr;
 
@@ -176,6 +181,22 @@ static int apply_kernelsu_rules_fn(void *ptr)
     ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
     
     return 0;
+}
+
+/*
+ * The policy is changed under policy_rwlock (write, with the preempt hack
+ * below) or in stop_machine(), and the allocations in here -- ours and the
+ * ones inside the SELinux helpers (ebitmap/hashtab/avtab) -- are GFP_KERNEL.
+ * Reclaim from those must not recurse into IO/filesystems (e.g. f2fs inode
+ * eviction -> quota), which can need SELinux checks: NOIO for the whole call.
+ */
+static int apply_kernelsu_rules_fn(void *ptr)
+{
+	unsigned int noio = memalloc_noio_save();
+	int ret = __apply_kernelsu_rules_fn(ptr);
+
+	memalloc_noio_restore(noio);
+	return ret;
 }
 
 void apply_kernelsu_rules()
@@ -652,7 +673,7 @@ struct handle_sepolicy_args {
 	u64 ctx_data_len;
 };
 
-static int handle_sepolicy_fn(void *data)
+static int __handle_sepolicy_fn(void *data)
 {
 	struct sepol_batch_cursor cursor;
 	int ret = 0;
@@ -707,6 +728,22 @@ static int handle_sepolicy_fn(void *data)
 
 out:
 	*(int *)(ctx->ctx_success_cmd_count) = success_cmd_count;
+	return ret;
+}
+
+/*
+ * The policy is changed under policy_rwlock (write, with the preempt hack
+ * below) or in stop_machine(), and the allocations in here -- ours and the
+ * ones inside the SELinux helpers (ebitmap/hashtab/avtab) -- are GFP_KERNEL.
+ * Reclaim from those must not recurse into IO/filesystems (e.g. f2fs inode
+ * eviction -> quota), which can need SELinux checks: NOIO for the whole call.
+ */
+static int handle_sepolicy_fn(void *data)
+{
+	unsigned int noio = memalloc_noio_save();
+	int ret = __handle_sepolicy_fn(data);
+
+	memalloc_noio_restore(noio);
 	return ret;
 }
 
