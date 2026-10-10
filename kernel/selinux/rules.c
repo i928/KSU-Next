@@ -89,11 +89,6 @@ static inline rwlock_t *ksu_get_policy_rwlock(void) { extern rwlock_t policy_rwl
 static inline rwlock_t *ksu_get_policy_rwlock(void) { return NULL; }
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0) || defined(KSU_COMPAT_HAS_BACKPORTED_CPUS_PTR)
-static inline const cpumask_t *ksu_get_current_cpumask_t() { return current->cpus_ptr; }
-#else
-static inline cpumask_t *ksu_get_current_cpumask_t() { return &current->cpus_allowed; }
-#endif
 
 #endif // #ifndef SELINUX_POLICY_INSTEAD_SELINUX_SS
 
@@ -228,7 +223,6 @@ out_unlock:
 	mutex_unlock(&selinux_state.policy_mutex);
 #else
 
-	cpumask_t old_mask;
 	db = get_policydb();
 	rwlock_t *lock = ksu_get_policy_rwlock();
 	
@@ -236,13 +230,20 @@ out_unlock:
 		goto do_stop_machine;
 
 	/*
-	 * HACK: write_lock() is held with preempt enabled. DO NOT let the
-	 * task be migrated to any other CPU than the current CPU. And since
-	 * set_cpus_allowed_ptr() can sleep, use raw_smp_processor_id() to get
-	 * current CPU and bypass preemption checks.
+	 * HACK: write_lock() is held with preempt enabled, because the policy
+	 * edits below allocate with GFP_KERNEL (and add_type() kvrealloc()s
+	 * the type arrays, i.e. vmalloc) and can sleep.
+	 *
+	 * Do NOT pin the task to the current CPU while doing so. Any task
+	 * that runs there while we sleep and makes an SELinux check spins in
+	 * read_lock(policy_rwlock) with preemption off; pinned, we could then
+	 * never run again to release the lock: that CPU is wedged and the
+	 * watchdog bites (sunfish: "Pet task is waiting on CPU6" right after
+	 * ksud post-fs-data applied a module's sepolicy.rule with new types).
+	 * Free to migrate, we finish on another CPU and the reader just waits.
+	 * Nothing here needs the CPU to stay the same: preempt_count and
+	 * lockdep state are per task, and the rwlock has no per-CPU owner.
 	 */
-	cpumask_copy(&old_mask, ksu_get_current_cpumask_t());
-	set_cpus_allowed_ptr(current, cpumask_of(raw_smp_processor_id()));
 
 	write_lock(lock);
 	preempt_enable();
@@ -269,7 +270,6 @@ has_current_mm:
 out_unlock:
 	preempt_disable();
 	write_unlock(lock);
-	set_cpus_allowed_ptr(current, &old_mask);
 	goto out_flush;
 
 do_stop_machine:
@@ -752,7 +752,6 @@ int handle_sepolicy(void __user *user_data, u64 data_len)
 	u8 *payload;
 	int ret = 0;
 	int success_cmd_count = 0;
-	cpumask_t old_mask;
 
 	if (!user_data || !data_len)
 		return -EINVAL;
@@ -783,13 +782,20 @@ int handle_sepolicy(void __user *user_data, u64 data_len)
 		goto do_stop_machine;
 
 	/*
-	 * HACK: write_lock() is held with preempt enabled. DO NOT let the
-	 * task be migrated to any other CPU than the current CPU. And since
-	 * set_cpus_allowed_ptr() can sleep, use raw_smp_processor_id() to get
-	 * current CPU and bypass preemption checks.
+	 * HACK: write_lock() is held with preempt enabled, because the policy
+	 * edits below allocate with GFP_KERNEL (and add_type() kvrealloc()s
+	 * the type arrays, i.e. vmalloc) and can sleep.
+	 *
+	 * Do NOT pin the task to the current CPU while doing so. Any task
+	 * that runs there while we sleep and makes an SELinux check spins in
+	 * read_lock(policy_rwlock) with preemption off; pinned, we could then
+	 * never run again to release the lock: that CPU is wedged and the
+	 * watchdog bites (sunfish: "Pet task is waiting on CPU6" right after
+	 * ksud post-fs-data applied a module's sepolicy.rule with new types).
+	 * Free to migrate, we finish on another CPU and the reader just waits.
+	 * Nothing here needs the CPU to stay the same: preempt_count and
+	 * lockdep state are per task, and the rwlock has no per-CPU owner.
 	 */
-	cpumask_copy(&old_mask, ksu_get_current_cpumask_t());
-	set_cpus_allowed_ptr(current, cpumask_of(raw_smp_processor_id()));
 
 	write_lock(lock);
 	preempt_enable();
@@ -814,7 +820,6 @@ has_current_mm:
 out_unlock:
 	preempt_disable();
 	write_unlock(lock);
-	set_cpus_allowed_ptr(current, &old_mask);
 	goto out_done;
 
 do_stop_machine:
