@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import dev.i928.mgr.BuildConfig
 import dev.i928.mgr.ksuApp
 import dev.i928.mgr.ui.util.module.LatestVersionInfo
 
@@ -68,6 +69,9 @@ fun checkNewVersion(preferSpoofed: Boolean? = null): LatestVersionInfo {
     val url = "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/releases/latest"
     // default null value if failed
     val defaultValue = LatestVersionInfo()
+    // The official release APK is com.rifsxd.ksunext with the official key; it can't
+    // replace a renamed, re-signed build (installed in the ROM), so don't offer it.
+    if (BuildConfig.APPLICATION_ID != "com.rifsxd.ksunext") return defaultValue
     runCatching {
         ksuApp.okhttpClient.newCall(okhttp3.Request.Builder().url(url).build()).execute()
             .use { response ->
